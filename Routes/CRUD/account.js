@@ -6,17 +6,19 @@ const fs = require('fs');
 
 const dataPath = './Details/useraccount.json' 
 
-
+//Write data to account.json
 const saveAccountData = (data) => {
     const stringifyData = JSON.stringify(data)
     fs.writeFileSync(dataPath, stringifyData)
 }
 
+//Read data from account.json
 const getAccounts = () => {
     const jsonData = fs.readFileSync(dataPath)
     return JSON.parse(jsonData)    
 }
 
+//found acc for read One of Acc - R
 const getOneAcount = ({
   userName,
   id,
@@ -31,25 +33,8 @@ const getOneAcount = ({
   }
   return foundedAcount
 }
-//test for use in delete oparation
-const getOneAcountById = ({
-  userName,
-  id,
-  email
-}) => {
-  const existAccounts = getAccounts();
-  let foundedAcount = null;
-  if (id) {
-    const foundedById = existAccounts.find((ac) => ac.id === id);
-    if (foundedById) foundedAcount = foundedById
-    console.log({foundedById})
-  }
-  return foundedAcount
-}
 
-
-
-// read json data
+// start url CRUD
 accountRoutes.get('/account', (req, res) => {
     fs.readFile(dataPath, 'utf8', (err, data) => {
       if (err) {
@@ -61,6 +46,7 @@ accountRoutes.get('/account', (req, res) => {
   });
 
 
+// create new account ------------------------------------------------------------------------ C
   accountRoutes.post('/account/addaccount', (req, res) => {
    
     const existAccounts = getAccounts()
@@ -73,93 +59,54 @@ accountRoutes.get('/account', (req, res) => {
 })
 
 
-// Read - get all accounts from the json file
+// Read all account ---------------------------------------------------------------------------- R
 accountRoutes.get('/account/list', (req, res) => {
   const accounts = getAccounts()
   res.send(accounts)
 })
 
-accountRoutes.get('/account/name/:name', (req, res) => {
+//read one account
+accountRoutes.get('/account/:name', (req, res) => {
   console.log({params: req.params})
   const foundedAcount = getOneAcount({userName: req.params["name"]})
   res.send(foundedAcount)
 })
 
 
-//do not update!!!!
-// Update - using Put method
+
+// Update data json ----------------------------------------------------------------------------- U
 accountRoutes.put('/account/:name', (req, res) => {
 
-  fs.readFile(dataPath, "utf8" , (err,data)=>{
-    if (err){
-      console.log("error in reading accounts information!")
-    } else{
-      const existAcc = getAccounts()
-      const foundAcc = req.params['id'];
-      existAcc[foundAcc] = req.body;
-      saveAccountData(existAcc);
-      res.send("update details")
+  const existAccount = getAccounts();
+  const accountData = req.body;
 
-      // const existUserss = getAccounts()
-      // getAccounts.put({...req.body})
-      // saveAccountData(getAccounts)
-      // res.send("succes!")
+  // Incoming data validation
+  if(accountData.userName === null || accountData.email === null || accountData.password === null ) {
+      return res.status(401).send({error: true, msg: 'account Data missing'});
+  }
+  
+  // Check whether the request Todo exists in Todos.JSON
+  existAccount.find(account => {
+      if(account.userName === accountData.userName) {
+        account.email = accountData.email;
+      }
+  })
+  console.log(JSON.stringify(existAccount));
+
+  saveAccountData(existAccount);
+  res.send({success: true, msg: 'account data updated successfully'});
+
+})
+
+
+//delete account -------------------------------------------------------------------------------- D
+accountRoutes.delete('/account/:userName', bodyParser.json(),(req, res) => {
    
-    }
+    const existAccounts = getAccounts();
+    const accountData = req.params;
+    const newListOfAccounts = existAccounts.filter(acc => acc.userName !== accountData.userName)
+    saveAccountData(newListOfAccounts);
+    res.send({success: true, msg: 'account data deleted successfully'});
   })
-});
-
-
-
-
-
-
-//do not delete!!!
-//delete - using delete method
-accountRoutes.delete('/account/delete/:id', bodyParser.json(),(req, res) => {
-  fs.readFile(dataPath, "utf8", (err, data)=>{
-    var exsitAccount = getAccounts()
-    const user = req.params['id'];
-    delete exsitAccount[user];
-    saveAccountData(exsitAccount);
-    res.send(`ok`)}, true);
-  })
-
-
-  //S1
-  // fs.readFile(dataPath, "utf8", (err, data)=>{
-  // let exsit = getAccounts();
-  // let doneDel = getOneAcountById({id: req.params['id']})
-  //  remo(exsit[doneDel])
-  // saveAccountData(exsit)
-  // res.send({exsit})
-  // })
-  // delete foundedAcount[{foundedById}]
-  // saveAccountData(existAccounts)
-  // console.log({foundedById})
-
-  //S2
-  // const exitAcc = getAccounts()
-  // fs.readFile(dataPath, "utf8", (err, data)=>{
-  //   let exitAcc = getAccounts()
-  //   const found = req.params['id'];
-  //   delete exitAcc[found]
-  //   saveAccountData(getAccounts);
-  //   res.send("succes")
-  // })
-
-  //S3
-  // const foundedAcount = getOneAcount()
-  // const acc = getAccounts.find(ac => ac.id === req.params.id);
-  // acc = ({...req.body});
-  //  fs.readFile(dataPath, 'utf8', (err, data) => {
-  //   var existAccounts = getAccounts()
-
-  //   const userId = req.params['id'];
-
-  //   delete existAccounts[userId];  
-  //   saveAccountData(existAccounts);
-  //   res.send(`accounts with id ${userId} has been deleted`)
-  // }, true);
 
 module.exports = accountRoutes
